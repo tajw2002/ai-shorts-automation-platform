@@ -20,8 +20,11 @@ COPY tsconfig.base.json ./
 COPY packages/contracts packages/contracts
 COPY apps/web apps/web
 
+# Git does not track empty directories, so `public/` is missing in a fresh clone
+# until it holds a file. The runtime stage copies it, so make sure it exists.
 RUN npm run build --workspace @shorts/contracts \
- && npm run build --workspace @shorts/web
+ && npm run build --workspace @shorts/web \
+ && mkdir -p apps/web/public
 
 FROM node:22-bookworm-slim AS runtime
 WORKDIR /app
