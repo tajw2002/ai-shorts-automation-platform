@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="600" viewBox="0 0 1200 600" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#e10600"/>
+    </marker>
+  </defs>
+  <rect width="1200" height="600" rx="18" fill="#0b0b0b"/>
+  <text x="40" y="52" fill="#ffffff" font-size="24" font-weight="700">Architektur</text>
+  <text x="40" y="80" fill="#a3a3a3" font-size="15">Die Geschäftslogik kennt nur Schnittstellen. Welcher Anbieter dahinter steckt, entscheidet die Konfiguration.</text>
+
+  <!-- Browser + Dashboard -->
+  <g font-size="16">
+    <rect x="40" y="130" width="200" height="80" rx="12" fill="#161616" stroke="#2c2c2c" stroke-width="2"/>
+    <text x="140" y="164" fill="#fff" font-weight="700" text-anchor="middle">Browser</text>
+    <text x="140" y="188" fill="#a3a3a3" font-size="14" text-anchor="middle">Bediener / Admin</text>
+
+    <rect x="40" y="260" width="200" height="110" rx="12" fill="#161616" stroke="#2c2c2c" stroke-width="2"/>
+    <text x="140" y="294" fill="#fff" font-weight="700" text-anchor="middle">Dashboard</text>
+    <text x="140" y="318" fill="#a3a3a3" font-size="14" text-anchor="middle">Next.js 15 · React 19</text>
+    <text x="140" y="342" fill="#a3a3a3" font-size="14" text-anchor="middle">Proxy mit Session-Cookie</text>
+  </g>
+
+  <!-- API -->
+  <rect x="300" y="130" width="440" height="330" rx="14" fill="#140707" stroke="#e10600" stroke-width="2.5"/>
+  <text x="520" y="166" fill="#fff" font-size="19" font-weight="700" text-anchor="middle">API · NestJS 11</text>
+  <text x="520" y="190" fill="#a3a3a3" font-size="14" text-anchor="middle">Pipeline als Zustandsautomat, Jobs in der Datenbank</text>
+  <g font-size="15" fill="#fff">
+    <rect x="324" y="210" width="190" height="48" rx="8" fill="#1d1d1d"/><text x="419" y="240" text-anchor="middle">Pipeline &amp; Jobs</text>
+    <rect x="526" y="210" width="190" height="48" rx="8" fill="#1d1d1d"/><text x="621" y="240" text-anchor="middle">Inhalte &amp; Figuren</text>
+    <rect x="324" y="270" width="190" height="48" rx="8" fill="#1d1d1d"/><text x="419" y="300" text-anchor="middle">Sicherheitsfilter</text>
+    <rect x="526" y="270" width="190" height="48" rx="8" fill="#1d1d1d"/><text x="621" y="300" text-anchor="middle">Duplikatprüfung</text>
+    <rect x="324" y="330" width="190" height="48" rx="8" fill="#1d1d1d"/><text x="419" y="360" text-anchor="middle">Kosten &amp; Limits</text>
+    <rect x="526" y="330" width="190" height="48" rx="8" fill="#1d1d1d"/><text x="621" y="360" text-anchor="middle">Qualitätskontrolle</text>
+    <rect x="324" y="390" width="190" height="48" rx="8" fill="#1d1d1d"/><text x="419" y="420" text-anchor="middle">Freigabe &amp; Upload</text>
+    <rect x="526" y="390" width="190" height="48" rx="8" fill="#1d1d1d"/><text x="621" y="420" text-anchor="middle">Statistik</text>
+  </g>
+
+  <!-- Anbieter -->
+  <rect x="800" y="130" width="360" height="330" rx="14" fill="none" stroke="#2c2c2c" stroke-width="2" stroke-dasharray="7 6"/>
+  <text x="980" y="166" fill="#fff" font-size="19" font-weight="700" text-anchor="middle">Anbieter (austauschbar)</text>
+  <text x="980" y="190" fill="#a3a3a3" font-size="14" text-anchor="middle">jeweils mit Mock für Tests ohne Kosten</text>
+  <g font-size="15">
+    <rect x="824" y="210" width="312" height="48" rx="8" fill="#161616" stroke="#2c2c2c"/>
+    <text x="844" y="240" fill="#fff" font-weight="700">Text</text><text x="1116" y="240" fill="#a3a3a3" text-anchor="end">Claude (Anthropic)</text>
+    <rect x="824" y="270" width="312" height="48" rx="8" fill="#161616" stroke="#2c2c2c"/>
+    <text x="844" y="300" fill="#fff" font-weight="700">Stimme</text><text x="1116" y="300" fill="#a3a3a3" text-anchor="end">ElevenLabs</text>
+    <rect x="824" y="330" width="312" height="48" rx="8" fill="#161616" stroke="#2c2c2c"/>
+    <text x="844" y="360" fill="#fff" font-weight="700">Video</text><text x="1116" y="360" fill="#a3a3a3" text-anchor="end">Replicate (Seedance)</text>
+    <rect x="824" y="390" width="312" height="48" rx="8" fill="#161616" stroke="#2c2c2c"/>
+    <text x="844" y="420" fill="#fff" font-weight="700">Upload</text><text x="1116" y="420" fill="#a3a3a3" text-anchor="end">YouTube Data API v3</text>
+  </g>
+
+  <!-- Infrastruktur unten -->
+  <g font-size="15">
+    <rect x="300" y="500" width="200" height="64" rx="10" fill="#161616" stroke="#2c2c2c" stroke-width="2"/>
+    <text x="400" y="528" fill="#fff" font-weight="700" text-anchor="middle">PostgreSQL 17</text>
+    <text x="400" y="550" fill="#a3a3a3" font-size="13" text-anchor="middle">Prisma, 27 Tabellen</text>
+    <rect x="520" y="500" width="200" height="64" rx="10" fill="#161616" stroke="#2c2c2c" stroke-width="2"/>
+    <text x="620" y="528" fill="#fff" font-weight="700" text-anchor="middle">Dateispeicher</text>
+    <text x="620" y="550" fill="#a3a3a3" font-size="13" text-anchor="middle">lokal oder Cloud Storage</text>
+    <rect x="740" y="500" width="200" height="64" rx="10" fill="#161616" stroke="#2c2c2c" stroke-width="2"/>
+    <text x="840" y="528" fill="#fff" font-weight="700" text-anchor="middle">FFmpeg</text>
+    <text x="840" y="550" fill="#a3a3a3" font-size="13" text-anchor="middle">Schnitt, Ton, Untertitel</text>
+  </g>
+
+  <g stroke="#e10600" stroke-width="2.5" fill="none" marker-end="url(#a)">
+    <line x1="140" y1="212" x2="140" y2="256"/>
+    <line x1="242" y1="315" x2="296" y2="315"/>
+    <line x1="742" y1="295" x2="796" y2="295"/>
+    <line x1="400" y1="462" x2="400" y2="496"/>
+    <line x1="620" y1="462" x2="620" y2="496"/>
+    <path d="M700,462 V480 H840 V496"/>
+  </g>
+</svg>

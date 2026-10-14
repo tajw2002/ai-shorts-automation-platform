@@ -1,0 +1,19 @@
+node_modules
+**/node_modules
+**/dist
+**/.next
+# Incremental build state is host-specific: copying it in makes tsc skip emitting
+# files it believes are unchanged, producing a silently incomplete image.
+**/*.tsbuildinfo
+**/coverage
+storage
+.git
+.github
+.env
+.env.*
+!.env.example
+*.log
+docs
+infra
+**/*.md
+.terraform

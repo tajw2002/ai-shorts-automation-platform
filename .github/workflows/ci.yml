@@ -1,0 +1,128 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Lint, typecheck and test
+    runs-on: ubuntu-latest
+
+    # Integration-level work needs a real Postgres; unit tests do not touch it.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: shorts
+          POSTGRES_PASSWORD: shorts
+          POSTGRES_DB: shorts
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U shorts"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # Tests must never reach a paid API. These are the same defaults the test
+      # bootstrap enforces; setting them here makes the intent visible in CI too.
+      NODE_ENV: test
+      DRY_RUN: 'true'
+      DATABASE_URL: postgresql://shorts:shorts@localhost:5432/shorts?schema=public
+      SESSION_SECRET: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      ENCRYPTION_KEY: BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=
+      INTERNAL_API_KEY: ci-internal-key-not-a-secret
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+
+      - run: npm ci
+
+      - name: Build shared contracts
+        run: npm run build --workspace @shorts/contracts
+
+      - name: Generate Prisma client
+        run: npm run db:generate
+
+      - name: Format check
+        run: npm run format:check
+
+      - run: npm run lint
+
+      - run: npm run typecheck
+
+      - name: Unit and integration tests
+        run: npm test
+
+      - name: Apply migrations
+        run: npm run db:deploy
+
+      - name: API tests against the real schema
+        run: npm run test:e2e --workspace @shorts/api
+
+  build-images:
+    name: Build container images
+    runs-on: ubuntu-latest
+    needs: verify
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Built but not pushed: this proves the Dockerfiles work on every PR
+      # without granting the workflow registry credentials.
+      - name: Build API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build dashboard image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  terraform:
+    name: Terraform validate
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+
+      - name: Format check
+        run: terraform fmt -check -recursive infra/terraform
+
+      - name: Validate
+        working-directory: infra/terraform
+        run: |
+          # The GCS backend needs credentials that a PR build does not have, so
+          # validation runs without it. The configuration itself is unchanged.
+          sed -i 's/backend "gcs" {}//' versions.tf
+          terraform init -backend=false -input=false
+          terraform validate

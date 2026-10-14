@@ -1,0 +1,87 @@
+# ---------------------------------------------------------------------------
+# Secrets — NEVER commit anything in this block.
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*credentials*.json
+*service-account*.json
+*client_secret*.json
+gcp-key*.json
+secrets/
+.secrets/
+oauth-tokens*.json
+token.json
+tokens.json
+
+# ---------------------------------------------------------------------------
+# Dependencies & build output
+# ---------------------------------------------------------------------------
+node_modules/
+dist/
+build/
+out/
+.next/
+.turbo/
+*.tsbuildinfo
+coverage/
+.nyc_output/
+
+# ---------------------------------------------------------------------------
+# Generated / runtime artifacts
+# ---------------------------------------------------------------------------
+# Anchored on purpose: a bare `storage/` also matched the source directory
+# apps/api/src/providers/storage, so the storage adapters were never committed.
+/storage/
+/apps/*/storage/
+tmp/
+.tmp/
+media-cache/
+*.mp4
+*.mp3
+*.wav
+*.m4a
+!apps/api/test/fixtures/**/*.mp4
+!apps/api/test/fixtures/**/*.wav
+
+# ---------------------------------------------------------------------------
+# Prisma
+# ---------------------------------------------------------------------------
+apps/api/prisma/generated/
+apps/api/src/generated/
+
+# ---------------------------------------------------------------------------
+# Terraform
+# ---------------------------------------------------------------------------
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+.terraform.lock.hcl
+crash.log
+
+# ---------------------------------------------------------------------------
+# Editors / OS
+# ---------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.example.json
+*.swp
+*~
+
+# ---------------------------------------------------------------------------
+# Logs
+# ---------------------------------------------------------------------------
+# Anchored for the same reason: `logs/` hid the dashboard's (console)/logs page.
+/logs/
+/apps/*/logs/
+*.log
+npm-debug.log*

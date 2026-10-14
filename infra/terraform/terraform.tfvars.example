@@ -1,0 +1,21 @@
+# Copy to terraform.tfvars and adjust. Never commit the real file.
+
+project_id = "my-gcp-project"
+region     = "europe-west1"
+environment = "prod"
+
+api_image = "europe-west1-docker.pkg.dev/my-gcp-project/shorts/api:v0.1.0"
+web_image = "europe-west1-docker.pkg.dev/my-gcp-project/shorts/web:v0.1.0"
+
+timezone = "Europe/Berlin"
+
+# Keep these conservative until the pipeline has proven itself end to end.
+dry_run          = true
+require_approval = true
+auto_publish     = false
+
+max_daily_uploads    = 3
+max_daily_cost_usd   = 10
+max_monthly_cost_usd = 200
+
+alert_email = "ops@example.com"

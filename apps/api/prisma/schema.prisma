@@ -1,0 +1,922 @@
+// =============================================================================
+// AI Shorts Automation Platform — data model
+// =============================================================================
+// Conventions
+//  * Enums mirror packages/contracts/src/enums.ts. `test/unit/enum-parity.spec.ts`
+//    fails the build if the two ever drift apart.
+//  * Money is stored as integer micro-USD (1_000_000 == $1) to avoid float drift.
+//  * Anything with a lifecycle uses an enum, never a free-form string.
+//  * Every foreign key that participates in a hot query has an explicit index.
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+
+  // Query-engine binaries to bundle. Prisma otherwise infers a single target from
+  // the machine that ran `prisma generate`, which breaks the moment the build host
+  // and the runtime differ — a Debian container built on an arm64 Mac, or a local
+  // build promoted to amd64 Cloud Run.
+  //   native                     → whatever the developer is on
+  //   debian-openssl-3.0.x       → the linux/amd64 runtime image (Cloud Run)
+  //   linux-arm64-openssl-3.0.x  → the linux/arm64 runtime image (Apple Silicon)
+  binaryTargets = ["native", "debian-openssl-3.0.x", "linux-arm64-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// -----------------------------------------------------------------------------
+// Enums
+// -----------------------------------------------------------------------------
+
+enum UserRole {
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+enum VideoStatus {
+  CREATED
+  SCRIPT_GENERATED
+  SCENES_PLANNED
+  GENERATING
+  GENERATED
+  ASSEMBLING
+  QUALITY_CHECK
+  READY_FOR_REVIEW
+  APPROVED
+  REJECTED
+  QUEUED
+  UPLOADING
+  PUBLISHED
+  FAILED
+  CANCELLED
+}
+
+enum SceneStatus {
+  PENDING
+  GENERATING
+  GENERATED
+  DOWNLOADED
+  FAILED
+  SKIPPED
+}
+
+enum IdeaStatus {
+  DRAFT
+  READY
+  IN_PRODUCTION
+  USED
+  ARCHIVED
+  BLOCKED
+}
+
+enum JobStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+  DEAD_LETTER
+}
+
+enum JobType {
+  IDEA_GENERATION
+  SCRIPT_GENERATION
+  SCENE_PLANNING
+  VIDEO_GENERATION
+  VOICE_GENERATION
+  ASSEMBLY
+  QUALITY_CONTROL
+  METADATA_GENERATION
+  UPLOAD
+  ANALYTICS_SYNC
+  PERFORMANCE_ANALYSIS
+  PIPELINE_ADVANCE
+}
+
+enum GenerationJobStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  PARTIAL
+  FAILED
+  CANCELLED
+}
+
+enum UploadJobStatus {
+  PENDING
+  UPLOADING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum ApprovalMode {
+  MANUAL
+  SEMI_AUTO
+  AUTO
+}
+
+enum PrivacyStatus {
+  private
+  unlisted
+  public
+}
+
+enum AssetKind {
+  SCENE_VIDEO
+  SCENE_IMAGE
+  VOICEOVER
+  MUSIC
+  SOUND_EFFECT
+  SUBTITLES
+  FINAL_VIDEO
+  THUMBNAIL
+}
+
+enum LicenseStatus {
+  AI_GENERATED
+  DERIVED_OWN
+  LICENSED
+  PUBLIC_DOMAIN
+  UNKNOWN
+}
+
+enum SafetyVerdict {
+  ALLOW
+  REVIEW
+  BLOCK
+}
+
+enum SafetyCategory {
+  VIOLENCE
+  SEXUAL
+  SELF_HARM
+  DANGEROUS_CHALLENGE
+  HATE
+  ILLEGAL_ACTIVITY
+  MEDICAL_ADVICE
+  CHILD_SAFETY
+  COPYRIGHT_RISK
+  REAL_PERSON
+  PROFANITY
+}
+
+enum QualityCheckStatus {
+  PASS
+  WARN
+  FAIL
+}
+
+enum ProviderKind {
+  LLM
+  VIDEO
+  VOICE
+  STORAGE
+  YOUTUBE
+  QUEUE
+}
+
+enum HealthStatus {
+  OK
+  WARNING
+  ERROR
+  DISABLED
+}
+
+enum LogLevel {
+  DEBUG
+  INFO
+  WARN
+  ERROR
+  FATAL
+}
+
+enum ScheduleStatus {
+  ACTIVE
+  PAUSED
+}
+
+enum CostCategory {
+  LLM
+  VIDEO
+  VOICE
+  STORAGE
+  OTHER
+}
+
+/// What kind of text a fingerprint was computed from.
+enum FingerprintKind {
+  IDEA_TITLE
+  IDEA_PREMISE
+  SCRIPT_NARRATION
+  SCENE_PROMPT
+  VIDEO_TITLE
+}
+
+// -----------------------------------------------------------------------------
+// Identity & access
+// -----------------------------------------------------------------------------
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String?
+  /// scrypt: `scrypt$N$r$p$salt$hash`, all base64. Never a plaintext password.
+  passwordHash String
+  role         UserRole  @default(VIEWER)
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  sessions  Session[]
+  auditLogs AuditLog[]
+  reviews   VideoStatusEvent[]
+
+  @@index([email])
+}
+
+model Session {
+  id         String    @id @default(cuid())
+  /// SHA-256 of the opaque session token. The raw token only ever lives in the
+  /// user's cookie, so a database leak does not hand over live sessions.
+  tokenHash  String    @unique
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Double-submit CSRF secret bound to this session.
+  csrfSecret String
+  ipAddress  String?
+  userAgent  String?
+  expiresAt  DateTime
+  lastSeenAt DateTime  @default(now())
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  /// e.g. `video.approve`, `settings.emergency_stop`, `channel.disconnect`
+  action     String
+  entityType String
+  entityId   String?
+  /// Non-sensitive detail about the change. Redacted before write.
+  metadata   Json?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+// -----------------------------------------------------------------------------
+// Channels & OAuth
+// -----------------------------------------------------------------------------
+
+model Channel {
+  id                String        @id @default(cuid())
+  /// YouTube channel id (UC...). Null until the OAuth handshake completes.
+  youtubeChannelId  String?       @unique
+  title             String
+  handle            String?
+  thumbnailUrl      String?
+  description       String?
+  isActive          Boolean       @default(true)
+  defaultCategoryId String        @default("24")
+  defaultPrivacy    PrivacyStatus @default(private)
+  /// YouTube's "made for kids" declaration. Must be set deliberately per channel.
+  madeForKids       Boolean       @default(false)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  credential OAuthCredential?
+  videos     Video[]
+  schedules  Schedule[]
+  uploadJobs UploadJob[]
+}
+
+model OAuthCredential {
+  id        String  @id @default(cuid())
+  channelId String  @unique
+  channel   Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  provider             String    @default("google")
+  /// AES-256-GCM ciphertext, base64: `v1:<iv>:<tag>:<ciphertext>`.
+  /// Plaintext refresh tokens never touch the database.
+  refreshTokenEnc      String
+  /// Short-lived; cached to avoid a refresh round-trip on every call.
+  accessTokenEnc       String?
+  accessTokenExpiresAt DateTime?
+  scopes               String[]
+  /// Bumped when ENCRYPTION_KEY is rotated, so re-encryption can be tracked.
+  keyVersion           Int       @default(1)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@index([channelId])
+}
+
+// -----------------------------------------------------------------------------
+// Character library
+// -----------------------------------------------------------------------------
+
+model Character {
+  id                String   @id @default(cuid())
+  name              String   @unique
+  description       String
+  ageDescriptor     String?
+  species           String   @default("human")
+  appearance        String
+  outfit            String?
+  personality       String   @default("")
+  voiceDescription  String?
+  voiceId           String?
+  visualStyle       String   @default("")
+  /// The exact text spliced into generation prompts.
+  promptDescription String
+  negativePrompt    String?
+  /// Stable seed handed to the video provider so the look stays consistent.
+  visualSeed        Int?
+  /// Incremented whenever a prompt-relevant field changes.
+  promptRevision    Int      @default(1)
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  ideas  IdeaCharacter[]
+  scenes SceneCharacter[]
+
+  @@index([isActive])
+}
+
+// -----------------------------------------------------------------------------
+// Content
+// -----------------------------------------------------------------------------
+
+model ContentIdea {
+  id                    String     @id @default(cuid())
+  title                 String
+  premise               String
+  hook                  String
+  /// Story beats, in order.
+  beats                 String[]
+  tone                  String     @default("wholesome")
+  targetDurationSeconds Int        @default(30)
+  noveltyRationale      String     @default("")
+  niche                 String
+  language              String     @default("en")
+  status                IdeaStatus @default(DRAFT)
+
+  safetyVerdict  SafetyVerdict @default(ALLOW)
+  safetyFindings Json?
+
+  /// Highest similarity score seen against existing content when this idea was
+  /// accepted. Kept for auditing the anti-repetition layer.
+  similarityScore Float @default(0)
+
+  /// Which model produced it, for reproducibility and cost attribution.
+  generatedBy String?
+  createdById String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  characters   IdeaCharacter[]
+  scripts      Script[]
+  videos       Video[]
+  fingerprints ContentFingerprint[]
+
+  @@index([status, createdAt])
+  @@index([niche])
+}
+
+model IdeaCharacter {
+  ideaId      String
+  characterId String
+  idea        ContentIdea @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  character   Character   @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  /// Character's role in this idea, e.g. "protagonist".
+  role        String      @default("")
+
+  @@id([ideaId, characterId])
+  @@index([characterId])
+}
+
+model Script {
+  id     String      @id @default(cuid())
+  ideaId String
+  idea   ContentIdea @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+
+  title                    String
+  hook                     String
+  /// Full narration text. Also the input to voice generation.
+  narration                String
+  callToAction             String @default("")
+  estimatedDurationSeconds Float
+  /// Scene drafts as produced by the LLM, before prompt rendering.
+  scenes                   Json
+  /// Revision counter — editing a script in the dashboard bumps it.
+  revision                 Int    @default(1)
+
+  safetyVerdict   SafetyVerdict @default(ALLOW)
+  safetyFindings  Json?
+  similarityScore Float         @default(0)
+
+  generatedBy String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  videos       Video[]
+  fingerprints ContentFingerprint[]
+
+  @@index([ideaId])
+}
+
+/// Normalised text fingerprints powering the anti-repetition layer.
+/// Stored separately from the source rows so a single indexed table can answer
+/// "have we made something like this before?" across every content kind.
+model ContentFingerprint {
+  id   String          @id @default(cuid())
+  kind FingerprintKind
+
+  /// SHA-256 of the normalised text — exact-duplicate detection.
+  contentHash String
+  /// 64-bit SimHash stored as a signed BigInt for cheap Hamming pre-filtering.
+  simhash     BigInt
+  /// Normalised text retained for the precise Jaccard/cosine comparison.
+  normalized  String
+
+  ideaId   String?
+  idea     ContentIdea? @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  scriptId String?
+  script   Script?      @relation(fields: [scriptId], references: [id], onDelete: Cascade)
+  videoId  String?
+  video    Video?       @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([kind, createdAt])
+  @@index([contentHash])
+  @@index([ideaId])
+  @@index([scriptId])
+  @@index([videoId])
+}
+
+// -----------------------------------------------------------------------------
+// Video production
+// -----------------------------------------------------------------------------
+
+model Video {
+  id String @id @default(cuid())
+
+  ideaId    String?
+  idea      ContentIdea? @relation(fields: [ideaId], references: [id], onDelete: SetNull)
+  scriptId  String?
+  script    Script?      @relation(fields: [scriptId], references: [id], onDelete: SetNull)
+  channelId String?
+  channel   Channel?     @relation(fields: [channelId], references: [id], onDelete: SetNull)
+
+  status    VideoStatus @default(CREATED)
+  /// Human-readable reason for the current FAILED/REJECTED state.
+  lastError String?
+  /// Set while a pipeline step holds this video, to prevent double-processing.
+  lockedAt  DateTime?
+  lockedBy  String?
+
+  // --- Publishing metadata -------------------------------------------------
+  title         String?
+  description   String?
+  tags          String[]
+  hashtags      String[]
+  categoryId    String?
+  privacyStatus PrivacyStatus @default(private)
+  madeForKids   Boolean       @default(false)
+
+  // --- Render properties ---------------------------------------------------
+  durationSeconds  Float?
+  width            Int?
+  height           Int?
+  fps              Int?
+  sizeBytes        Int?
+  subtitlesEnabled Boolean @default(true)
+
+  // --- Publication ---------------------------------------------------------
+  youtubeVideoId String?   @unique
+  youtubeUrl     String?
+  scheduledAt    DateTime?
+  publishedAt    DateTime?
+  approvedAt     DateTime?
+  approvedById   String?
+
+  // --- Cached analytics (authoritative history lives in AnalyticsSnapshot) --
+  views            Int    @default(0)
+  likes            Int    @default(0)
+  comments         Int    @default(0)
+  performanceScore Float?
+
+  safetyVerdict SafetyVerdict @default(ALLOW)
+  /// Total attributed spend in micro-USD.
+  costMicros    Int           @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  scenes         VideoScene[]
+  assets         Asset[]
+  qualityReports QualityReport[]
+  generationJobs GenerationJob[]
+  uploadJobs     UploadJob[]
+  analytics      AnalyticsSnapshot[]
+  costRecords    CostRecord[]
+  statusEvents   VideoStatusEvent[]
+  jobs           Job[]
+  fingerprints   ContentFingerprint[]
+
+  @@index([status, createdAt])
+  @@index([channelId, publishedAt])
+  @@index([scheduledAt])
+}
+
+/// Append-only audit trail of every state transition.
+model VideoStatusEvent {
+  id        String       @id @default(cuid())
+  videoId   String
+  video     Video        @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  from      VideoStatus?
+  to        VideoStatus
+  note      String?
+  /// Null when the transition was made by the system rather than a person.
+  actorId   String?
+  actor     User?        @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  createdAt DateTime     @default(now())
+
+  @@index([videoId, createdAt])
+}
+
+model VideoScene {
+  id      String @id @default(cuid())
+  videoId String
+  video   Video  @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  index           Int
+  /// Rendered visual prompt, with character fragments already injected.
+  prompt          String
+  negativePrompt  String?
+  seed            Int?
+  action          String  @default("")
+  voiceover       String  @default("")
+  onScreenText    String?
+  camera          String  @default("")
+  mood            String  @default("")
+  durationSeconds Float
+
+  status        SceneStatus @default(PENDING)
+  /// Provider-side job identifier, so a poll can resume after a restart.
+  providerJobId String?
+  providerName  String?
+  attempts      Int         @default(0)
+  errorMessage  String?
+
+  assetId String? @unique
+  asset   Asset?  @relation(fields: [assetId], references: [id], onDelete: SetNull)
+
+  characters SceneCharacter[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([videoId, index])
+  @@index([status])
+}
+
+model SceneCharacter {
+  sceneId        String
+  characterId    String
+  scene          VideoScene @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+  character      Character  @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  /// The character revision used, so an old render stays explainable.
+  promptRevision Int        @default(1)
+
+  @@id([sceneId, characterId])
+  @@index([characterId])
+}
+
+/// Any binary the platform produced or licensed. Provenance is mandatory.
+model Asset {
+  id      String    @id @default(cuid())
+  videoId String?
+  video   Video?    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  kind    AssetKind
+
+  /// Storage key within the configured StorageProvider bucket/root.
+  storageKey      String
+  contentType     String
+  sizeBytes       Int     @default(0)
+  durationSeconds Float?
+  checksumSha256  String?
+
+  // --- Provenance ----------------------------------------------------------
+  /// Which adapter produced it, e.g. `mock-video`, `elevenlabs`.
+  sourceProvider  String
+  sourceModel     String?
+  /// Free-form origin note: prompt id, licence purchase reference, etc.
+  sourceReference String?
+  licenseStatus   LicenseStatus @default(UNKNOWN)
+  licenseNote     String?
+  licenseUrl      String?
+
+  createdAt DateTime @default(now())
+
+  scene VideoScene?
+
+  @@index([videoId, kind])
+  @@index([licenseStatus])
+}
+
+model QualityReport {
+  id      String @id @default(cuid())
+  videoId String
+  video   Video  @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  passed       Boolean
+  failureCount Int      @default(0)
+  warningCount Int      @default(0)
+  /// Full QualityCheck[] payload.
+  checks       Json
+  createdAt    DateTime @default(now())
+
+  @@index([videoId, createdAt])
+}
+
+// -----------------------------------------------------------------------------
+// Jobs & queue
+// -----------------------------------------------------------------------------
+
+/// Transport-level worker record. One row per queued unit of work.
+model Job {
+  id      String    @id @default(cuid())
+  type    JobType
+  status  JobStatus @default(QUEUED)
+  payload Json      @default("{}")
+
+  videoId String?
+  video   Video?  @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  /// Duplicate deliveries with the same key collapse into one execution.
+  idempotencyKey String   @unique
+  attempts       Int      @default(0)
+  maxAttempts    Int      @default(3)
+  /// Earliest time this job may run — drives exponential backoff.
+  runAfter       DateTime @default(now())
+  priority       Int      @default(0)
+
+  /// Identifies the worker holding the claim, for stuck-job diagnostics.
+  claimedBy     String?
+  createdAt     DateTime  @default(now())
+  startedAt     DateTime?
+  finishedAt    DateTime?
+  errorMessage  String?
+  /// Provider correlation id, so a failure can be traced upstream.
+  correlationId String?
+
+  @@index([status, runAfter, priority])
+  @@index([type, status])
+  @@index([videoId])
+}
+
+/// Domain record for one video-generation run. Outlives individual Job attempts.
+model GenerationJob {
+  id      String @id @default(cuid())
+  videoId String
+  video   Video  @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  status   GenerationJobStatus @default(PENDING)
+  provider String
+  model    String?
+
+  scenesTotal     Int @default(0)
+  scenesCompleted Int @default(0)
+  scenesFailed    Int @default(0)
+
+  costMicros Int @default(0)
+
+  createdAt    DateTime  @default(now())
+  startedAt    DateTime?
+  finishedAt   DateTime?
+  errorMessage String?
+
+  @@index([videoId, createdAt])
+  @@index([status])
+}
+
+/// Domain record for one YouTube upload attempt, including resumable state.
+model UploadJob {
+  id        String  @id @default(cuid())
+  videoId   String
+  video     Video   @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  channelId String
+  channel   Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  status        UploadJobStatus @default(PENDING)
+  privacyStatus PrivacyStatus   @default(private)
+  publishAt     DateTime?
+
+  /// Resumable upload session URI — lets a retry continue rather than restart.
+  resumableSessionUrl String?
+  bytesUploaded       Int     @default(0)
+  bytesTotal          Int?
+
+  youtubeVideoId String?
+  attempts       Int     @default(0)
+  /// True when DRY_RUN suppressed the real API call.
+  simulated      Boolean @default(false)
+
+  createdAt    DateTime  @default(now())
+  startedAt    DateTime?
+  finishedAt   DateTime?
+  errorMessage String?
+
+  @@index([videoId, createdAt])
+  @@index([status])
+  @@index([channelId, finishedAt])
+}
+
+// -----------------------------------------------------------------------------
+// Scheduling
+// -----------------------------------------------------------------------------
+
+model Schedule {
+  id        String  @id @default(cuid())
+  name      String
+  channelId String
+  channel   Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  /// IANA zone, e.g. `Europe/Berlin`. All slot times are wall-clock in this zone.
+  timezone     String         @default("Europe/Berlin")
+  videosPerDay Int            @default(1)
+  approvalMode ApprovalMode   @default(MANUAL)
+  status       ScheduleStatus @default(PAUSED)
+  lastRunAt    DateTime?
+  nextRunAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  slots ScheduleSlot[]
+
+  @@index([status, nextRunAt])
+}
+
+model ScheduleSlot {
+  id         String   @id @default(cuid())
+  scheduleId String
+  schedule   Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  /// 0 = Sunday … 6 = Saturday. Null means every day.
+  dayOfWeek Int?
+  hour      Int
+  minute    Int  @default(0)
+
+  @@unique([scheduleId, dayOfWeek, hour, minute])
+}
+
+// -----------------------------------------------------------------------------
+// Analytics
+// -----------------------------------------------------------------------------
+
+/// Immutable point-in-time reading. Never updated, only appended.
+model AnalyticsSnapshot {
+  id      String @id @default(cuid())
+  videoId String
+  video   Video  @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  views                      Int
+  likes                      Int
+  comments                   Int
+  averageViewDurationSeconds Float?
+
+  /// Values derived from the previous snapshot, cached to keep charts cheap.
+  viewsPerHour     Float?
+  likeRate         Float?
+  commentRate      Float?
+  performanceScore Float?
+
+  capturedAt DateTime @default(now())
+
+  @@index([videoId, capturedAt])
+  @@index([capturedAt])
+}
+
+/// Output of the AI performance analysis. Patterns only — never a copy.
+model PerformanceInsight {
+  id             String   @id @default(cuid())
+  dimension      String
+  observation    String
+  recommendation String
+  confidence     Float
+  sampleVideoIds String[]
+  sampleSize     Int      @default(0)
+  /// True while this insight is fed into idea generation.
+  isActive       Boolean  @default(true)
+  generatedBy    String?
+  createdAt      DateTime @default(now())
+
+  @@index([isActive, createdAt])
+}
+
+// -----------------------------------------------------------------------------
+// Operations
+// -----------------------------------------------------------------------------
+
+/// Non-secret provider configuration, editable from the dashboard.
+/// API keys live in the environment / Secret Manager and are never stored here.
+model ProviderConfig {
+  id             String       @id @default(cuid())
+  kind           ProviderKind
+  /// Adapter name, e.g. `mock`, `anthropic`, `gcs`.
+  implementation String
+  isDefault      Boolean      @default(false)
+  isEnabled      Boolean      @default(true)
+  /// Non-secret settings only. Writes are filtered against a key allow-list.
+  settings       Json         @default("{}")
+  lastHealth     HealthStatus @default(OK)
+  lastCheckedAt  DateTime?
+  lastError      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([kind, implementation])
+  @@index([kind, isDefault])
+}
+
+/// Runtime-mutable operational switches. Overrides the env-supplied defaults so
+/// an operator can pause the system without a redeploy.
+model SystemSetting {
+  key         String   @id
+  value       Json
+  description String?
+  updatedById String?
+  updatedAt   DateTime @updatedAt
+}
+
+model SystemLog {
+  id      String   @id @default(cuid())
+  level   LogLevel
+  service String
+  message String
+  /// Structured context. Passed through the same redaction list as the logger.
+  context Json?
+  /// Error name + message + sanitised stack. Never contains credentials.
+  error   String?
+
+  videoId String?
+  jobId   String?
+
+  createdAt DateTime @default(now())
+
+  @@index([level, createdAt])
+  @@index([service, createdAt])
+  @@index([videoId])
+  @@index([jobId])
+}
+
+model CostRecord {
+  id        String       @id @default(cuid())
+  category  CostCategory
+  provider  String
+  model     String?
+  /// e.g. `generateScript`, `generateVideo`, `generateSpeech`.
+  operation String
+
+  units     Float  @default(0)
+  unitLabel String @default("units")
+  requests  Int    @default(1)
+
+  /// Pre-call estimate in micro-USD; always populated.
+  estimatedMicros Int
+  /// Post-call actual in micro-USD, when the provider reports it.
+  actualMicros    Int?
+
+  videoId String?
+  video   Video?  @relation(fields: [videoId], references: [id], onDelete: SetNull)
+  jobId   String?
+
+  /// True when DRY_RUN meant no money actually moved.
+  simulated Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([category, createdAt])
+  @@index([videoId])
+}

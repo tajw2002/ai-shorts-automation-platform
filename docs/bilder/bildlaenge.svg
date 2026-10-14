@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">
+  <defs>
+    <pattern id="waste" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="10" height="10" fill="#262626"/>
+      <line x1="0" y1="0" x2="0" y2="10" stroke="#4a4a4a" stroke-width="4"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="360" rx="18" fill="#0b0b0b"/>
+  <text x="40" y="52" fill="#ffffff" font-size="24" font-weight="700">Wie viele Videosekunden bezahlt werden</text>
+  <text x="40" y="80" fill="#a3a3a3" font-size="15">Gemessen am ersten echten Video: 22,8 Sekunden gesprochener Text, 0,036 $ pro Sekunde bei 720p.</text>
+
+  <!-- Skala: 0 s bei x=300, 1 s = 20 px -->
+  <g fill="#8a8a8a" font-size="13" text-anchor="middle">
+    <line x1="300" y1="300" x2="1100" y2="300" stroke="#2c2c2c"/>
+    <line x1="300" y1="296" x2="300" y2="304" stroke="#8a8a8a"/><text x="300" y="322">0 s</text>
+    <line x1="500" y1="296" x2="500" y2="304" stroke="#8a8a8a"/><text x="500" y="322">10 s</text>
+    <line x1="700" y1="296" x2="700" y2="304" stroke="#8a8a8a"/><text x="700" y="322">20 s</text>
+    <line x1="900" y1="296" x2="900" y2="304" stroke="#8a8a8a"/><text x="900" y="322">30 s</text>
+    <line x1="1100" y1="296" x2="1100" y2="304" stroke="#8a8a8a"/><text x="1100" y="322">40 s</text>
+  </g>
+
+  <!-- Vorher -->
+  <text x="40" y="146" fill="#fff" font-size="17" font-weight="700">Vorher</text>
+  <text x="40" y="168" fill="#a3a3a3" font-size="14">nach geplanter Szenenlänge</text>
+  <rect x="300" y="128" width="456" height="46" fill="#e10600"/>
+  <rect x="756" y="128" width="304" height="46" fill="url(#waste)"/>
+  <text x="528" y="157" fill="#fff" font-size="15" font-weight="700" text-anchor="middle">im Video gezeigt</text>
+  <text x="908" y="157" fill="#d4d4d4" font-size="14" text-anchor="middle">bezahlt, nie gezeigt (15 s)</text>
+  <text x="1070" y="157" fill="#fff" font-size="15" font-weight="700">1,37 $</text>
+
+  <!-- Nachher -->
+  <text x="40" y="236" fill="#fff" font-size="17" font-weight="700">Nachher</text>
+  <text x="40" y="258" fill="#a3a3a3" font-size="14">nach gemessener Stimme</text>
+  <rect x="300" y="218" width="456" height="46" fill="#e10600"/>
+  <rect x="756" y="218" width="44" height="46" fill="url(#waste)"/>
+  <text x="528" y="247" fill="#fff" font-size="15" font-weight="700" text-anchor="middle">im Video gezeigt</text>
+  <text x="812" y="247" fill="#a3a3a3" font-size="13">Aufrunden auf ganze Sekunden</text>
+  <text x="1070" y="247" fill="#fff" font-size="15" font-weight="700">0,90 $</text>
+</svg>

@@ -1,0 +1,96 @@
+# Local development stack.
+#
+# `docker compose up -d postgres` is enough to run the API from your host.
+# `docker compose --profile app up` additionally runs the API and dashboard in
+# containers, which is the closest local approximation of the Cloud Run topology.
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: shorts-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: shorts
+      POSTGRES_PASSWORD: shorts
+      POSTGRES_DB: shorts
+      # Slightly faster startup and deterministic collation for text comparisons.
+      POSTGRES_INITDB_ARGS: '--encoding=UTF8 --locale=C'
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U shorts -d shorts']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  api:
+    profiles: ['app']
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: shorts-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      APP_ROLE: all
+      PORT: '3001'
+      DATABASE_URL: postgresql://shorts:shorts@postgres:5432/shorts?schema=public
+      API_BASE_URL: http://localhost:3001
+      WEB_BASE_URL: http://localhost:3000
+      CORS_ALLOWED_ORIGINS: http://localhost:3000
+      # Safe defaults. Compose's `environment:` outranks `env_file:`, so these
+      # must interpolate from .env rather than pin a literal, or a .env switch
+      # would be silently ignored. The fallback keeps an unset value safe.
+      DRY_RUN: '${DRY_RUN:-true}'
+      REQUIRE_APPROVAL: '${REQUIRE_APPROVAL:-true}'
+      AUTO_PUBLISH: '${AUTO_PUBLISH:-false}'
+      LOCAL_STORAGE_ROOT: /data/storage
+    env_file:
+      - .env
+    ports:
+      - '3001:3001'
+    volumes:
+      - api-storage:/data/storage
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3001/liveness').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  web:
+    profiles: ['app']
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: shorts-web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_started
+    environment:
+      NODE_ENV: development
+      # Server-side calls go container-to-container; the browser uses localhost.
+      API_INTERNAL_URL: http://api:3001
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+      # The image defaults to 8080 for Cloud Run. Locally the dashboard must be on
+      # 3000: WEB_BASE_URL, CORS and the post-OAuth redirect all point there.
+      PORT: '3000'
+    ports:
+      - '3000:3000'
+
+volumes:
+  postgres-data:
+  api-storage:

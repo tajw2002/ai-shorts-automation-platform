@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="470" viewBox="0 0 1200 470" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#e10600"/>
+    </marker>
+    <marker id="arrow-grey" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8a8a8a"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="470" rx="18" fill="#0b0b0b"/>
+  <text x="40" y="52" fill="#ffffff" font-size="24" font-weight="700">So entsteht ein Short</text>
+  <text x="40" y="80" fill="#a3a3a3" font-size="15">Jeder Schritt ist ein eigener Job in der Warteschlange. Schlägt einer fehl, wird nur dieser Schritt wiederholt.</text>
+
+  <!-- Reihe 1 -->
+  <g font-size="17">
+    <g transform="translate(40,110)">
+      <rect width="196" height="96" rx="12" fill="#161616" stroke="#2c2c2c" stroke-width="2"/>
+      <circle cx="30" cy="30" r="15" fill="#e10600"/><text x="30" y="36" fill="#fff" font-weight="700" text-anchor="middle">1</text>
+      <text x="56" y="36" fill="#fff" font-weight="700">Idee</text>
+      <text x="20" y="72" fill="#a3a3a3" font-size="14">Claude, mit Duplikatprüfung</text>
+    </g>
+    <g transform="translate(270,110)">
+      <rect width="196" height="96" rx="12" fill="#161616" stroke="#2c2c2c" stroke-width="2"/>
+      <circle cx="30" cy="30" r="15" fill="#e10600"/><text x="30" y="36" fill="#fff" font-weight="700" text-anchor="middle">2</text>
+      <text x="56" y="36" fill="#fff" font-weight="700">Skript</text>
+      <text x="20" y="72" fill="#a3a3a3" font-size="14">Text pro Szene + Sicherheit</text>
+    </g>
+    <g transform="translate(500,110)">
+      <rect width="196" height="96" rx="12" fill="#161616" stroke="#2c2c2c" stroke-width="2"/>
+      <circle cx="30" cy="30" r="15" fill="#e10600"/><text x="30" y="36" fill="#fff" font-weight="700" text-anchor="middle">3</text>
+      <text x="56" y="36" fill="#fff" font-weight="700">Szenen</text>
+      <text x="20" y="72" fill="#a3a3a3" font-size="14">Bild-Prompts mit Figuren</text>
+    </g>
+    <g transform="translate(730,110)">
+      <rect width="196" height="96" rx="12" fill="#161616" stroke="#e10600" stroke-width="2"/>
+      <circle cx="30" cy="30" r="15" fill="#e10600"/><text x="30" y="36" fill="#fff" font-weight="700" text-anchor="middle">4</text>
+      <text x="56" y="36" fill="#fff" font-weight="700">Stimme</text>
+      <text x="20" y="72" fill="#a3a3a3" font-size="14">ElevenLabs, Länge messen</text>
+    </g>
+    <g transform="translate(960,110)">
+      <rect width="196" height="96" rx="12" fill="#161616" stroke="#2c2c2c" stroke-width="2"/>
+      <circle cx="30" cy="30" r="15" fill="#e10600"/><text x="30" y="36" fill="#fff" font-weight="700" text-anchor="middle">5</text>
+      <text x="56" y="36" fill="#fff" font-weight="700">Clips</text>
+      <text x="20" y="72" fill="#a3a3a3" font-size="14">Replicate, passend zur Stimme</text>
+    </g>
+  </g>
+
+  <!-- Reihe 2 -->
+  <g font-size="17">
+    <g transform="translate(40,276)">
+      <rect width="196" height="96" rx="12" fill="#161616" stroke="#2c2c2c" stroke-width="2"/>
+      <circle cx="30" cy="30" r="15" fill="#e10600"/><text x="30" y="36" fill="#fff" font-weight="700" text-anchor="middle">6</text>
+      <text x="56" y="36" fill="#fff" font-weight="700">Schnitt</text>
+      <text x="20" y="72" fill="#a3a3a3" font-size="14">FFmpeg, Untertitel, Lautheit</text>
+    </g>
+    <g transform="translate(270,276)">
+      <rect width="196" height="96" rx="12" fill="#161616" stroke="#2c2c2c" stroke-width="2"/>
+      <circle cx="30" cy="30" r="15" fill="#e10600"/><text x="30" y="36" fill="#fff" font-weight="700" text-anchor="middle">7</text>
+      <text x="56" y="36" fill="#fff" font-weight="700">Prüfung</text>
+      <text x="20" y="72" fill="#a3a3a3" font-size="14">bis zu 20 Prüfungen</text>
+    </g>
+    <g transform="translate(500,276)">
+      <rect width="196" height="96" rx="12" fill="#1f0a0a" stroke="#e10600" stroke-width="2.5" stroke-dasharray="8 6"/>
+      <circle cx="30" cy="30" r="15" fill="#ffffff"/><text x="30" y="36" fill="#0b0b0b" font-weight="700" text-anchor="middle">8</text>
+      <text x="56" y="36" fill="#fff" font-weight="700">Freigabe</text>
+      <text x="20" y="72" fill="#ff6b62" font-size="14">Ein Mensch entscheidet</text>
+    </g>
+    <g transform="translate(730,276)">
+      <rect width="196" height="96" rx="12" fill="#161616" stroke="#2c2c2c" stroke-width="2"/>
+      <circle cx="30" cy="30" r="15" fill="#e10600"/><text x="30" y="36" fill="#fff" font-weight="700" text-anchor="middle">9</text>
+      <text x="56" y="36" fill="#fff" font-weight="700">Upload</text>
+      <text x="20" y="72" fill="#a3a3a3" font-size="14">YouTube API, privat</text>
+    </g>
+    <g transform="translate(960,276)">
+      <rect width="196" height="96" rx="12" fill="#161616" stroke="#2c2c2c" stroke-width="2"/>
+      <circle cx="30" cy="30" r="15" fill="#e10600"/><text x="30" y="36" fill="#fff" font-weight="700" text-anchor="middle">10</text>
+      <text x="56" y="36" fill="#fff" font-weight="700">Statistik</text>
+      <text x="20" y="72" fill="#a3a3a3" font-size="14">Aufrufe, Likes, Auswertung</text>
+    </g>
+  </g>
+
+  <!-- Pfeile Reihe 1 -->
+  <g stroke="#e10600" stroke-width="2.5" fill="none" marker-end="url(#arrow)">
+    <line x1="238" y1="158" x2="266" y2="158"/>
+    <line x1="468" y1="158" x2="496" y2="158"/>
+    <line x1="698" y1="158" x2="726" y2="158"/>
+    <line x1="928" y1="158" x2="956" y2="158"/>
+    <path d="M1058,208 V240 H138 V272"/>
+    <line x1="238" y1="324" x2="266" y2="324"/>
+    <line x1="468" y1="324" x2="496" y2="324"/>
+    <line x1="698" y1="324" x2="726" y2="324"/>
+    <line x1="928" y1="324" x2="956" y2="324"/>
+  </g>
+
+  <!-- Rückkopplung -->
+  <path d="M1058,374 V420 H20 V158 H36" stroke="#8a8a8a" stroke-width="2" stroke-dasharray="6 6" fill="none" marker-end="url(#arrow-grey)"/>
+  <text x="600" y="446" fill="#8a8a8a" font-size="14" text-anchor="middle">Was gut lief, fließt als Muster in neue Ideen ein, nie als Kopie</text>
+</svg>
